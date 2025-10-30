@@ -219,9 +219,6 @@ pip install mord           # For ordinal regression
 **Core:** pandas, numpy, scikit-learn, matplotlib, seaborn, shap  
 **Optional:** umap-learn, mord
 
-## 📄 License
-
-[Your License]
 
 ## 🤝 Contributing
 
