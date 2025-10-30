@@ -72,18 +72,12 @@ class OrdinalClassifier:
         
     def _preprocess(self, X, fit=False):
         """Apply log transformation and scaling."""
-        X_processed = X.copy()
+        X_processed = X.copy() if isinstance(X, pd.DataFrame) else X
         
-        # Log transform
         if self.log_transform:
-            # Handle zeros by adding small constant
-            X_processed = np.log10(X_processed + 1e-10)
+            X_processed = np.log10(X_processed + 1e-10)  # Handle zeros
         
-        # Scale
-        if fit:
-            X_processed = self.scaler.fit_transform(X_processed)
-        else:
-            X_processed = self.scaler.transform(X_processed)
+        X_processed = self.scaler.fit_transform(X_processed) if fit else self.scaler.transform(X_processed)
         
         return X_processed
     
