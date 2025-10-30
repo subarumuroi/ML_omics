@@ -16,48 +16,37 @@ def prepare_data(df, target_col='Groups', drop_missing=True, verbose=True):
     df : pd.DataFrame
         Input dataframe
     target_col : str, default='Groups'
-        Name of target column
+        Target column name
     drop_missing : bool, default=True
-        Drop columns with any missing values
+        Drop columns with missing values
     verbose : bool, default=True
-        Print information about dropped columns
+        Print dropped columns
         
     Returns
     -------
     tuple
         (X, y_raw, y_encoded, label_encoder, dropped_cols)
-        - X: DataFrame with features
-        - y_raw: Series with original target labels
-        - y_encoded: numpy array with encoded labels (0, 1, 2, ...)
-        - label_encoder: fitted LabelEncoder object
-        - dropped_cols: list of column names that were dropped
     """
-    # Separate features and target
     y_raw = df[target_col].copy()
     X_raw = df.drop(columns=[target_col])
     
     dropped_cols = []
     if drop_missing:
-        # Identify columns with missing values
         missing_cols = X_raw.columns[X_raw.isna().any()].tolist()
         dropped_cols = missing_cols
         
         if missing_cols and verbose:
-            print(f"\nDropped {len(missing_cols)} columns due to missing values:")
-            for col in missing_cols:
-                print(f"  - {col}")
+            print(f"\nDropped {len(missing_cols)} columns with missing values")
         
         X = X_raw.drop(columns=missing_cols)
     else:
         X = X_raw
     
-    # Encode target labels
     le = LabelEncoder()
     y_encoded = le.fit_transform(y_raw)
     
     if verbose:
-        print(f"\nTarget classes: {list(le.classes_)}")
-        print(f"Encoded as: {list(range(len(le.classes_)))}")
+        print(f"Classes: {list(le.classes_)} → {list(range(len(le.classes_)))}")
     
     return X, y_raw, y_encoded, le, dropped_cols
 

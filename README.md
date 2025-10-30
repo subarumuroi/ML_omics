@@ -26,25 +26,21 @@ ml-analysis-package/
 ## 🚀 Installation
 
 ```bash
-# Navigate to package directory
 cd /path/to/ml-analysis-package
 
 # Create virtual environment (recommended)
 python -m venv venv
-source venv/bin/activate        # Mac/Linux
-# venv\Scripts\activate         # Windows
+source venv/bin/activate        # Mac/Linux: venv\Scripts\activate on Windows
 
-# Install with all dependencies
-pip install -e ".[all]"
-
-# Or choose specific extras
+# Install
+pip install -e ".[all]"         # Everything
 pip install -e .                # Core only
 pip install -e ".[umap]"        # + UMAP
 pip install -e ".[ordinal]"     # + Ordinal regression
 pip install -e ".[dev]"         # + Dev tools
 ```
 
-Verify: `python -c "from preprocessing import load_and_impute; print('✅ Ready!')"`
+Verify: `python -c "from preprocessing import load_and_impute; print('✅')"`
 
 ## 📖 Quick Start
 
@@ -90,45 +86,57 @@ print(f"Accuracy: {results['mean_accuracy']:.3f}, MAE: {results['mean_mae']:.3f}
 
 ## 💡 Common Workflows
 
-### Feature Analysis
+### Feature Screening
 
 ```python
-from analysis import get_feature_importance_df, permutation_test
-from visualization import plot_compound_trends, plot_feature_importance
+from preprocessing import load_and_impute, select_k_best_features, get_top_n_features
+from models import train_evaluate_model
+from analysis import get_feature_importance_df
+from visualization import plot_compound_trends
+from utils import prepare_data
 
-# Train model
-clf = train_evaluate_model(X, y)
+df = load_and_impute("data.csv", group_col='Groups', impute=True)
+X, _, y, le, _ = prepare_data(df)
+X_sel, features, _ = select_k_best_features(X, y, k=15)
+clf = train_evaluate_model(X_sel, y)
 
-# Get importance
-importance_df = get_feature_importance_df(clf.model, X.columns)
-plot_feature_importance(importance_df, top_n=10)
-
-# Test significance
-from sklearn.model_selection import StratifiedKFold
-from sklearn.ensemble import RandomForestClassifier
-cv = StratifiedKFold(n_splits=4)
-rf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
-perm_results = permutation_test(rf, X, y, cv, n_permutations=1000)
-print(f"p-value: {perm_results['p_value']:.4f}")
-
-# Visualize trends
-from preprocessing import get_top_n_features
+importance_df = get_feature_importance_df(clf.model, features)
 top_5 = get_top_n_features(importance_df, n=5)
 plot_compound_trends(df, top_5, scale='log')
 ```
 
-### Compare Models
+### Rigorous Validation
 
 ```python
-from models.ordinal import compare_ordinal_models
+from sklearn.model_selection import StratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
+from analysis import permutation_test
+from visualization import plot_confusion_matrix, plot_permutation_test_distribution
 
-# Compare different ordinal models
-comparison = compare_ordinal_models(X, y_ordinal, 
-    model_types=['LogisticAT', 'LogisticIT', 'LogisticSE'])
+clf = train_evaluate_model(X, y)
 
-# Compare RF vs Ordinal
-rf_results = train_evaluate_model(X, y_encoded)
-ordinal_results = train_evaluate_ordinal(X, y_ordinal)
+cv = StratifiedKFold(n_splits=4)
+rf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
+perm = permutation_test(rf, X, y, cv, n_permutations=1000)
+
+plot_confusion_matrix(clf.confusion_matrix, le.classes_)
+plot_permutation_test_distribution(perm['perm_accuracies'], perm['observed_accuracy'])
+print(f"p={perm['p_value']:.4f}")
+```
+
+### Ordinal Regression
+
+```python
+from models.ordinal import train_evaluate_ordinal, encode_ordinal_target
+from visualization.ordinal_plots import plot_ordinal_coefficients
+
+df = load_and_impute("data.csv", group_col='Groups', impute=True)
+X, y_raw, _, _, _ = prepare_data(df)
+y = encode_ordinal_target(y_raw, categories=['Green', 'Ripe', 'Overripe'])
+
+results = train_evaluate_ordinal(X, y)
+plot_ordinal_coefficients(results['coefficients'], top_n=10)
+print(f"Acc={results['mean_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
 ```
 
 ## 📚 Key Modules
@@ -163,20 +171,16 @@ ordinal_results = train_evaluate_ordinal(X, y_ordinal)
 - `create_results_directory()` - Organized output folders
 - `save_results()` - Save to JSON/pickle
 
-## 🔧 Configuration Tips
+## 🔧 Configuration
 
-**Model Parameters:**
-- `max_depth=3` - Good for small datasets (prevents overfitting)
-- `n_estimators=100` - Balances performance and speed
-- Feature selection: Start with k=15-20, narrow to top 3-5 for interpretation
+**Models:**  
+`max_depth=3` (small datasets), `n_estimators=100`, `k=15-20` features → narrow to top 3-5
 
-**Statistical Testing:**
-- Use `n_permutations=1000` for reliable p-values
-- p < 0.05 indicates significant relationship
+**Stats:**  
+`n_permutations=1000`, p < 0.05 = significant
 
-**Visualization:**
-- Use log scale for wide-ranging compound data
-- Save at dpi=300 for publication quality
+**Viz:**  
+Log scale for wide ranges, dpi=300 for publication
 
 ## 📊 Output Structure
 
@@ -190,17 +194,15 @@ results/your_analysis/
 └── results.json          # Summary metrics
 ```
 
-## 🛠️ Alternative Usage (No Install)
+## 🛠️ No Install Usage
 
 ```python
 import sys
 sys.path.insert(0, 'src')
-
 from preprocessing.data_processing import load_and_impute
-from models.random_forest import train_evaluate_model
 ```
 
-**Note:** `pip install -e .` is recommended for cleaner imports.
+Recommended: Use `pip install -e .` for clean imports.
 
 ## 🔍 Troubleshooting
 
@@ -219,6 +221,9 @@ pip install mord           # For ordinal regression
 **Core:** pandas, numpy, scikit-learn, matplotlib, seaborn, shap  
 **Optional:** umap-learn, mord
 
+## 📄 License
+
+[Your License]
 
 ## 🤝 Contributing
 
@@ -226,4 +231,4 @@ Format code with `black` before submitting.
 
 ---
 
-**Version:** 0.1.0 | **Python:** ≥3.8
+**Version:** 0.1.0 | **Python:** ≥3.8 | **See also:** `ORDINAL_INTEGRATION.md` for ordinal regression details
