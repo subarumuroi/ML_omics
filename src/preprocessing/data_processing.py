@@ -35,4 +35,6 @@ def load_and_impute(file_path, group_col, fill_value=None, impute=True):
     if fill_value is not None:
         df = df.fillna(fill_value)
     
+    if isinstance(df.index, pd.MultiIndex):
+        df = df.reset_index(drop=True)
     return df

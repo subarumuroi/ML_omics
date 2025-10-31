@@ -222,7 +222,7 @@ def train_evaluate_ordinal(X, y, model_type='LogisticAT', scaler='minmax',
     if n_splits is None:
         n_splits = np.bincount(y).min()
     
-    cv = StratifiedKFold(n_splits=n_splits, shuffle=False, random_state=random_state)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     
     # Store feature names
     feature_names = X.columns.tolist() if isinstance(X, pd.DataFrame) else None

@@ -42,7 +42,7 @@ class RFClassifierCV:
         self.confusion_matrix = None
         self._is_fitted = False
         
-    def cross_validate(self, X, y, n_splits=None, verbose=True):
+    def cross_validate(self, X, y, n_splits=None, random_state=42, verbose=True):
         """
         Perform stratified k-fold cross-validation.
         
@@ -54,6 +54,8 @@ class RFClassifierCV:
             Target labels (encoded as integers)
         n_splits : int, optional
             Number of CV folds. If None, uses minimum class count
+        random_state : int, default=42
+            Random state for reproducible shuffling
         verbose : bool, default=True
             Print fold results
             
@@ -63,7 +65,7 @@ class RFClassifierCV:
             CV metrics and predictions
         """
         n_splits = n_splits or np.bincount(y).min()
-        cv = StratifiedKFold(n_splits=n_splits, shuffle=False)
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
         
         scores, bal_scores, all_true, all_pred = [], [], [], []
         

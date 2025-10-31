@@ -1,4 +1,4 @@
-# ML Analysis Package
+# ML omics Analysis Package
 
 A modular Python package for machine learning analysis with Random Forest classification, ordinal regression, feature selection, permutation testing, and comprehensive visualization.
 
@@ -26,7 +26,7 @@ ml-analysis-package/
 ## 🚀 Installation
 
 ```bash
-cd /path/to/ml-analysis-package
+cd /path/to/ML_omics
 
 # Create virtual environment (recommended)
 python -m venv venv

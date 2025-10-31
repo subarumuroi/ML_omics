@@ -76,7 +76,7 @@ def main():
     # ======================================================================
     # CONFIGURATION
     # ======================================================================
-    DATA_FILE = "badata_imputed.csv"
+    DATA_FILE = "data\\badata.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     N_FEATURES_SELECT = 15
