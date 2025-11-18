@@ -64,22 +64,52 @@ def main():
     
     # Load and prepare data
     print("STEP 1: Loading and preparing data...")
-    df = load_and_impute(DATA_FILE, group_col=GROUP_COL, impute=True, fill_value=0)
+    df = load_and_impute(DATA_FILE, group_col=GROUP_COL, impute=True, fill_value=0, drop_threshold=0.35)
     df = df.drop(columns='Unnamed: 0', errors='ignore')  # Drop index column
     df = set_categorical_order(df, col=GROUP_COL, categories=GROUP_ORDER)
     X, y_raw, _, _, _ = prepare_data(df, target_col=GROUP_COL, drop_missing=True)
-
-    # try to make the model work with limited features
     X = X.select_dtypes(include=[np.number])
-
-    # Feature selection - use at most 5 features for 12 samples
-    X, selected_features, scores = select_k_best_features(X, y_raw, k=5, verbose=True)
-    X = pd.DataFrame(X, columns=selected_features)
-
-    y = encode_ordinal_target(y_raw, categories=GROUP_ORDER)
-    y = np.array(y) # turns into numpy array for mord compatibility
     
-    print(f"Features: {X.shape[1]}, Samples: {X.shape[0]}")
+    print(f"Initial features: {X.shape[1]}, Samples: {X.shape[0]}")
+    
+    # STEP 1.5: Determine optimal number of features
+    print("\n" + "="*70)
+    print("STEP 1.5: Feature Selection Analysis")
+    print("="*70)
+    
+    feature_counts = [3, 5, 7, 10, 15]
+    results_by_k = {}
+    
+    for k in feature_counts:
+        if k > X.shape[1]:
+            print(f"Skipping k={k} (exceeds available features)")
+            continue
+        
+        X_k, features_k, _ = select_k_best_features(X, y_raw, k=k, verbose=False)
+        y_encoded = np.array(encode_ordinal_target(y_raw, categories=GROUP_ORDER))
+        
+        results = train_evaluate_ordinal(X_k, y_encoded, model_type='LogisticAT', 
+                                         scaler='minmax', log_transform=True, 
+                                         n_splits=None, verbose=False)
+        results_by_k[k] = {
+            'accuracy': results['mean_accuracy'],
+            'mae': results['mean_mae'],
+            'std_accuracy': results['std_accuracy'],
+            'features': list(features_k)
+        }
+        print(f"k={k:2d}: Accuracy={results['mean_accuracy']:.3f}±{results['std_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
+    
+    # Select optimal k (prioritize lower MAE, then higher accuracy)
+    optimal_k = min(results_by_k.keys(), key=lambda k: (results_by_k[k]['mae'], -results_by_k[k]['accuracy']))
+    print(f"\n✓ Optimal number of features: {optimal_k}")
+    print(f"  Selected features: {results_by_k[optimal_k]['features']}")
+    
+    # Use optimal k for final model
+    X, selected_features, _ = select_k_best_features(X, y_raw, k=optimal_k, verbose=False)
+    X = pd.DataFrame(X, columns=selected_features)
+    y = np.array(encode_ordinal_target(y_raw, categories=GROUP_ORDER))
+    
+    print(f"\nFinal feature set: {X.shape[1]} features, {X.shape[0]} samples")
     print(f"Encoding: {dict(zip(GROUP_ORDER, range(len(GROUP_ORDER))))}")
     
     # Train ordinal regression model
@@ -93,14 +123,14 @@ def main():
     model = results['model']
     coef_df = results['coefficients']
     
-    print(f"\nTop {TOP_N_FEATURES} important features:")
+    print(f"\nTop {min(TOP_N_FEATURES, len(coef_df))} important features:")
     print(coef_df.head(TOP_N_FEATURES))
     
     # Visualizations
     print("\nSTEP 3-5: Generating visualizations...")
     
     # Coefficients
-    fig, _ = plot_ordinal_coefficients(coef_df, top_n=TOP_N_FEATURES)
+    fig, _ = plot_ordinal_coefficients(coef_df, top_n=min(TOP_N_FEATURES, len(coef_df)))
     fig.savefig(results_dirs['figures'] / 'ordinal_coefficients.png', dpi=300, bbox_inches='tight')
     plt.close()
     
@@ -122,7 +152,7 @@ def main():
     # Compound analysis
     print("\nSTEP 6-8: Compound analysis...")
     
-    top_features = coef_df.head(TOP_N_FEATURES)['Feature'].tolist()
+    top_features = coef_df['Feature'].tolist()  # Use all selected features
     
     for scale in ['linear', 'log']:
         fig, _ = plot_compound_trends(df, top_features, group_col=GROUP_COL, 
@@ -168,12 +198,22 @@ def main():
     coef_df.to_csv(results_dirs['data'] / 'ordinal_coefficients.csv', index=False)
     comparison.to_csv(results_dirs['data'] / 'ordinal_model_comparison.csv', index=False)
     
+    # Save feature selection results
+    feature_selection_df = pd.DataFrame([
+        {'k': k, 'accuracy': v['accuracy'], 'std_accuracy': v['std_accuracy'], 
+         'mae': v['mae'], 'features': ', '.join(v['features'])}
+        for k, v in results_by_k.items()
+    ])
+    feature_selection_df.to_csv(results_dirs['data'] / 'feature_selection_analysis.csv', index=False)
+    
     summary = {
         'model_type': 'LogisticAT',
+        'optimal_k': optimal_k,
         'n_features': X.shape[1],
         'cv_accuracy': results['mean_accuracy'],
         'cv_mae': results['mean_mae'],
-        'top_features': top_features,
+        'selected_features': list(selected_features),
+        'feature_selection_results': results_by_k,
         'ordinal_encoding': dict(zip(GROUP_ORDER, range(len(GROUP_ORDER)))),
     }
     
@@ -183,7 +223,8 @@ def main():
     print("\n" + "="*70)
     print("ANALYSIS COMPLETE!")
     print("="*70)
-    print(f"\nOrdinal: Accuracy={results['mean_accuracy']:.3f}±{results['std_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
+    print(f"\nOptimal k: {optimal_k}")
+    print(f"Ordinal: Accuracy={results['mean_accuracy']:.3f}±{results['std_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
     print(f"RF: Accuracy={rf_clf.cv_results['mean_accuracy']:.3f}±{rf_clf.cv_results['std_accuracy']:.3f}")
     print(f"\nTop 3 features predicting ripeness:")
     for i, row in coef_df.head(3).iterrows():
