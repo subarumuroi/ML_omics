@@ -30,6 +30,9 @@ def prepare_data(df, target_col='Groups', drop_missing=True, verbose=True):
     y_raw = df[target_col].copy()
     X_raw = df.drop(columns=[target_col])
     
+    # Keep only numeric columns
+    X_raw = X_raw.select_dtypes(include=[np.number])
+    
     dropped_cols = []
     if drop_missing:
         missing_cols = X_raw.columns[X_raw.isna().any()].tolist()

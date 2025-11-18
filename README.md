@@ -6,8 +6,7 @@ A modular Python package for machine learning analysis with Random Forest classi
 
 ```
 ml-analysis-package/
-├── pyproject.toml              # Modern package configuration
-├── requirements.txt            # Dependency list
+├── pyproject.toml              # Package configuration
 ├── README.md                   # This file
 │
 ├── src/
@@ -21,6 +20,8 @@ ml-analysis-package/
     ├── complete_workflow.py    # Full RF analysis
     ├── modern_workflow.py      # Using installed package
     └── ordinal_workflow.py     # Ordinal regression
+    └── test_banana_workflow.py # sanity check to see preprocessing is handling missing data correctly, verifies oridnal and rf works and confirms plottin functions can handle data
+    # test all above workflows to see which ones are relevant. Remove as necessary
 ```
 
 ## 🚀 Installation

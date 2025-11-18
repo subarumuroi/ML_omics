@@ -12,7 +12,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import package modules
-from preprocessing import load_and_impute
+from preprocessing import (
+    load_and_impute,
+    select_k_best_features
+)
 from models.ordinal import (
     OrdinalClassifier,
     train_evaluate_ordinal,
@@ -48,7 +51,7 @@ def main():
     """Run complete ordinal regression workflow."""
     
     # Configuration
-    DATA_FILE = "badata_imputed.csv"
+    DATA_FILE = "data/badata.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     TOP_N_FEATURES = 10
@@ -61,11 +64,20 @@ def main():
     
     # Load and prepare data
     print("STEP 1: Loading and preparing data...")
-    
     df = load_and_impute(DATA_FILE, group_col=GROUP_COL, impute=True, fill_value=0)
+    df = df.drop(columns='Unnamed: 0', errors='ignore')  # Drop index column
     df = set_categorical_order(df, col=GROUP_COL, categories=GROUP_ORDER)
     X, y_raw, _, _, _ = prepare_data(df, target_col=GROUP_COL, drop_missing=True)
+
+    # try to make the model work with limited features
+    X = X.select_dtypes(include=[np.number])
+
+    # Feature selection - use at most 5 features for 12 samples
+    X, selected_features, scores = select_k_best_features(X, y_raw, k=5, verbose=True)
+    X = pd.DataFrame(X, columns=selected_features)
+
     y = encode_ordinal_target(y_raw, categories=GROUP_ORDER)
+    y = np.array(y) # turns into numpy array for mord compatibility
     
     print(f"Features: {X.shape[1]}, Samples: {X.shape[0]}")
     print(f"Encoding: {dict(zip(GROUP_ORDER, range(len(GROUP_ORDER))))}")
@@ -146,10 +158,7 @@ def main():
     print("STEP 10: Comparing with Random Forest")
     print("="*70)
     
-    from preprocessing import select_k_best_features
-    X_selected, selected_features, _ = select_k_best_features(X, y, k=15, verbose=False)
-    X_df = pd.DataFrame(X_selected, columns=selected_features)
-    rf_clf = train_evaluate_model(X_df, y, verbose=True)
+    rf_clf = train_evaluate_model(X, y, verbose=True)
     
     # Save results
     print("\n" + "="*70)
