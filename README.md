@@ -1,235 +1,342 @@
-# ML omics Analysis Package
+# ML Omics Analysis Package
 
-A modular Python package for machine learning analysis with Random Forest classification, ordinal regression, feature selection, permutation testing, and comprehensive visualization.
+A modular Python package for machine learning analysis of omics data with ordinal regression, Random Forest classification, automated feature selection, and comprehensive visualization.
 
-## 📁 Package Structure
+**Built for:** Multi-omics classification tasks (metabolomics, proteomics, transcriptomics) with emphasis on ordered outcomes.
 
-```
-ml-analysis-package/
-├── pyproject.toml              # Package configuration
-├── README.md                   # This file
-│
-├── src/
-│   ├── preprocessing/          # Data loading & feature selection
-│   ├── models/                 # RF, ordinal regression, evaluation
-│   ├── analysis/               # Feature importance, permutation tests
-│   ├── visualization/          # All plotting functions
-│   └── utils/                  # Data preparation, I/O
-│
-└── examples/
-    ├── complete_workflow.py    # Full RF analysis
-    ├── modern_workflow.py      # Using installed package
-    └── ordinal_workflow.py     # Ordinal regression
-    └── test_banana_workflow.py # sanity check to see preprocessing is handling missing data correctly, verifies oridnal and rf works and confirms plottin functions can handle data
-    # test all above workflows to see which ones are relevant. Remove as necessary
-```
-
-## 🚀 Installation
-
+## 🚀 Quick Install
 ```bash
 cd /path/to/ML_omics
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate        # Mac/Linux: venv\Scripts\activate on Windows
+# Install in editable mode (recommended for development)
+pip install -e ".[all]"
 
-# Install
-pip install -e ".[all]"         # Everything
-pip install -e .                # Core only
-pip install -e ".[umap]"        # + UMAP
-pip install -e ".[ordinal]"     # + Ordinal regression
-pip install -e ".[dev]"         # + Dev tools
+# Verify installation
+python -c "from preprocessing import load_and_impute; print('✅ Ready!')"
 ```
 
-Verify: `python -c "from preprocessing import load_and_impute; print('✅')"`
+**Requirements:** Python ≥3.8
+
+---
 
 ## 📖 Quick Start
 
-### Basic Random Forest Workflow
+### Ordinal Regression (Recommended for Ordered Outcomes)
 
+For data with natural ordering (Green < Ripe < Overripe, Mild < Moderate < Severe):
+```python
+from preprocessing import load_and_impute, select_k_best_features
+from models.ordinal import train_evaluate_ordinal, encode_ordinal_target
+from utils import prepare_data
+
+# Load and prepare data
+df = load_and_impute("data.csv", group_col='Groups', 
+                     impute=True, fill_value=0, drop_threshold=0.35)
+X, y_raw, _, _, _ = prepare_data(df, target_col='Groups')
+
+# Encode ordinal target
+y = encode_ordinal_target(y_raw, categories=['Green', 'Ripe', 'Overripe'])
+
+# Automatic feature selection (tests k=1,2,3,5,7,10,15)
+X_opt, features, _ = select_k_best_features(X, y, k=5)  # or use optimal k
+
+# Train with cross-validation
+results = train_evaluate_ordinal(X_opt, y, log_transform=True)
+
+print(f"Accuracy: {results['mean_accuracy']:.3f}")
+print(f"MAE: {results['mean_mae']:.3f}")  # Mean absolute error (categories off)
+```
+
+### Random Forest (General Classification)
+
+For any classification task or baseline comparison:
+```python
+from models import train_evaluate_model
+
+# Same data preparation as above
+X_selected, features, _ = select_k_best_features(X, y, k=15)
+
+# Train with CV
+clf = train_evaluate_model(X_selected, y, n_estimators=100, max_depth=3)
+
+print(f"CV Accuracy: {clf.cv_results['mean_accuracy']:.3f}")
+```
+
+---
+
+## 📁 Package Structure
+```
+ML_omics/
+├── src/
+│   ├── preprocessing/      # load_and_impute, feature selection
+│   ├── models/             # RF, ordinal regression, evaluation
+│   ├── analysis/           # Feature importance, permutation tests
+│   ├── visualization/      # Plotting functions
+│   └── utils/              # Data prep, I/O
+│
+└── examples/
+    ├── ordinal_regression_workflow.py   # Main workflow (recommended for data with classifiable stages (I.e. disease progression))
+    └── random_forest_workflow.py        # Alternative baseline
+```
+
+---
+
+## 🔬 Key Features
+
+### Automatic Data Handling
+
+**Handles common omics data issues:**
+- ✅ Missing values (group median imputation)
+- ✅ Negative values (metabolomics baseline correction)
+- ✅ Low-quality features (automatic filtering)
+```python
+df = load_and_impute(
+    file_path="data.csv",
+    group_col='Groups',
+    impute=True,           # Median imputation by group
+    fill_value=0,          # Fill remaining NaNs
+    drop_threshold=0.35    # Drop features >35% missing
+)
+```
+
+**Smart feature filtering:**
+- Drops features where entire groups are missing (>35% threshold)
+- Handles negative values from normalization/correction
+- Preserves relative differences for classification
+
+### Automated Feature Selection
+
+Finds optimal number of features via cross-validation:
+```python
+# Tests multiple k values automatically
+feature_counts = [1, 2, 3, 5, 7, 10, 15]
+for k in feature_counts:
+    # Evaluates accuracy and MAE
+    # Selects k with best performance
+```
+
+Common results: **2-5 features sufficient** for small omics datasets (n=9-12)
+
+### Ordinal Regression Models
+
+**Three model types available:**
+- `LogisticAT` - All-Threshold model (most flexible, **recommended**)
+- `LogisticIT` - Immediate-Threshold model
+- `LogisticSE` - Stereotype model (assumes equal spacing)
+```python
+from models.ordinal import compare_ordinal_models
+
+# Compare all three
+comparison = compare_ordinal_models(X, y, 
+    model_types=['LogisticAT', 'LogisticIT', 'LogisticSE'])
+```
+
+### Rich Visualizations
+```python
+from visualization.ordinal_plots import (
+    plot_ordinal_coefficients,
+    plot_ordinal_confusion_matrix,
+    plot_ordinal_cv_performance
+)
+from visualization import plot_compound_trends, plot_compound_boxplots
+
+# Ordinal-specific
+plot_ordinal_coefficients(results['coefficients'], top_n=10)
+plot_ordinal_confusion_matrix(results['all_true'], results['all_pred'])
+
+# Data exploration
+plot_compound_trends(df, top_features, group_col='Groups', scale='log')
+plot_compound_boxplots(df, top_features, group_col='Groups')
+```
+
+---
+
+## 💡 Complete Workflow Example
+
+See `examples/ordinal_workflow.py` for full pipeline including:
+
+1. **Data loading** with automatic handling of missing/negative values
+2. **Automated feature selection** (finds optimal k)
+3. **Ordinal model training** with cross-validation
+4. **Model comparison** (LogisticAT vs IT vs SE vs Random Forest)
+5. **Comprehensive visualization** (coefficients, confusion matrix, compound trends)
+6. **Automated results saving** (figures, data, JSON summaries)
+```bash
+# Run complete analysis
+python examples/ordinal_workflow.py
+
+# Results saved to:
+results/ordinal_analysis/
+├── figures/          # All plots
+├── data/             # CSVs, feature rankings
+└── ordinal_results.json
+```
+
+---
+
+## 📊 Output Structure
+
+Organized results directory:
+```
+results/your_analysis_name/
+├── figures/
+│   ├── ordinal_coefficients.png
+│   ├── ordinal_confusion_matrix.png
+│   ├── compound_trends_linear.png
+│   └── compound_trends_log.png
+├── data/
+│   ├── ordinal_coefficients.csv
+│   ├── feature_selection_analysis.csv
+│   └── top10_univariate_scores.csv
+└── ordinal_results.json
+```
+
+---
+
+## 🔧 Common Use Cases
+
+### 1. Quick Classification
 ```python
 from preprocessing import load_and_impute, select_k_best_features
 from models import train_evaluate_model
 from utils import prepare_data
 
-# Load and prepare
-df = load_and_impute("data.csv", group_col='Groups', impute=True)
-X, _, y, le, _ = prepare_data(df, target_col='Groups')
-
-# Select features and train with CV
-X_selected, features, _ = select_k_best_features(X, y, k=15)
-clf = train_evaluate_model(X_selected, y)
-
-print(f"CV Accuracy: {clf.cv_results['mean_accuracy']:.3f}")
-```
-
-### Ordinal Regression (For Ordered Outcomes)
-
-```python
-from models.ordinal import train_evaluate_ordinal, encode_ordinal_target
-from visualization.ordinal_plots import plot_ordinal_coefficients
-
-# Load data
-df = load_and_impute("data.csv", group_col='Groups', impute=True)
-X, y_raw, _, _, _ = prepare_data(df)
-
-# Encode as ordinal: Green=0, Ripe=1, Overripe=2
-y = encode_ordinal_target(y_raw, categories=['Green', 'Ripe', 'Overripe'])
-
-# Train with CV
-results = train_evaluate_ordinal(X, y)
-
-# Visualize
-plot_ordinal_coefficients(results['coefficients'], top_n=10)
-
-print(f"Accuracy: {results['mean_accuracy']:.3f}, MAE: {results['mean_mae']:.3f}")
-```
-
-## 💡 Common Workflows
-
-### Feature Screening
-
-```python
-from preprocessing import load_and_impute, select_k_best_features, get_top_n_features
-from models import train_evaluate_model
-from analysis import get_feature_importance_df
-from visualization import plot_compound_trends
-from utils import prepare_data
-
-df = load_and_impute("data.csv", group_col='Groups', impute=True)
-X, _, y, le, _ = prepare_data(df)
-X_sel, features, _ = select_k_best_features(X, y, k=15)
+df = load_and_impute("data.csv", group_col='Groups', impute=True, fill_value=0)
+X, _, y, _, _ = prepare_data(df, target_col='Groups')
+X_sel, features, _ = select_k_best_features(X, y, k=10)
 clf = train_evaluate_model(X_sel, y)
-
-importance_df = get_feature_importance_df(clf.model, features)
-top_5 = get_top_n_features(importance_df, n=5)
-plot_compound_trends(df, top_5, scale='log')
+print(f"Accuracy: {clf.cv_results['mean_accuracy']:.3f}")
 ```
 
-### Rigorous Validation
-
+### 2. Find Top Biomarkers
 ```python
-from sklearn.model_selection import StratifiedKFold
-from sklearn.ensemble import RandomForestClassifier
+from preprocessing import get_feature_scores
+
+# Get univariate F-statistics
+scores_df = get_feature_scores(X, y)
+print(scores_df.head(10))  # Top 10 features with p-values
+```
+
+### 3. Rigorous Validation
+```python
 from analysis import permutation_test
-from visualization import plot_confusion_matrix, plot_permutation_test_distribution
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold
 
-clf = train_evaluate_model(X, y)
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+cv = StratifiedKFold(n_splits=3)
 
-cv = StratifiedKFold(n_splits=4)
-rf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
-perm = permutation_test(rf, X, y, cv, n_permutations=1000)
-
-plot_confusion_matrix(clf.confusion_matrix, le.classes_)
-plot_permutation_test_distribution(perm['perm_accuracies'], perm['observed_accuracy'])
-print(f"p={perm['p_value']:.4f}")
+perm_results = permutation_test(rf, X, y, cv, n_permutations=1000)
+print(f"p-value: {perm_results['p_value']:.4f}")
 ```
 
-### Ordinal Regression
+---
 
-```python
-from models.ordinal import train_evaluate_ordinal, encode_ordinal_target
-from visualization.ordinal_plots import plot_ordinal_coefficients
-
-df = load_and_impute("data.csv", group_col='Groups', impute=True)
-X, y_raw, _, _, _ = prepare_data(df)
-y = encode_ordinal_target(y_raw, categories=['Green', 'Ripe', 'Overripe'])
-
-results = train_evaluate_ordinal(X, y)
-plot_ordinal_coefficients(results['coefficients'], top_n=10)
-print(f"Acc={results['mean_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
-```
-
-## 📚 Key Modules
+## 📚 Core Modules
 
 ### preprocessing
-- `load_and_impute()` - Load CSV with median imputation by group
-- `select_k_best_features()` - Select top K features
-- `get_top_n_features()` - Extract top N feature names
+- `load_and_impute()` - Load CSV with smart missing data handling
+- `select_k_best_features()` - Univariate feature selection (sorted by score)
+- `get_feature_scores()` - Get F-statistics and p-values
 
 ### models
-- `train_evaluate_model()` - Train RF with CV
-- `RFClassifierCV` - RF classifier with built-in CV
-- `OrdinalClassifier` - Ordinal regression (requires `mord`)
-- `train_evaluate_ordinal()` - Train ordinal model with CV
+- `train_evaluate_model()` - Random Forest with CV
+- `train_evaluate_ordinal()` - Ordinal regression with CV
+- `compare_ordinal_models()` - Compare multiple ordinal models
+- `encode_ordinal_target()` - Convert categories to ordinal integers
+
+### visualization
+- `plot_ordinal_coefficients()` - Feature coefficients bar plot
+- `plot_ordinal_confusion_matrix()` - Ordinal-specific confusion matrix
+- `plot_compound_trends()` - Line plots across groups
+- `plot_compound_boxplots()` - Distribution boxplots
+- `plot_correlation_heatmap()` - Feature correlations
+- `plot_violin_by_group()` - Violin plots by group
 
 ### analysis
 - `get_feature_importance_df()` - Tree-based importance
-- `compute_permutation_importance()` - Permutation-based importance
-- `permutation_test()` - Test model significance
-- `get_shap_values()` - SHAP interpretability
-
-### visualization
-- `plot_confusion_matrix()` - Confusion matrix
-- `plot_feature_importance()` - Importance bar chart
-- `plot_compound_trends()` - Line plots (linear/log scale)
-- `plot_compound_boxplots()` - Distribution boxplots
-- `plot_tsne()`, `plot_umap()` - Dimensionality reduction
-- `plot_ordinal_coefficients()` - Ordinal coefficients
+- `permutation_test()` - Statistical significance testing
+- `get_shap_values()` - Model interpretability (requires `shap`)
 
 ### utils
 - `prepare_data()` - Separate features/target, encode labels
 - `create_results_directory()` - Organized output folders
-- `save_results()` - Save to JSON/pickle
-
-## 🔧 Configuration
-
-**Models:**  
-`max_depth=3` (small datasets), `n_estimators=100`, `k=15-20` features → narrow to top 3-5
-
-**Stats:**  
-`n_permutations=1000`, p < 0.05 = significant
-
-**Viz:**  
-Log scale for wide ranges, dpi=300 for publication
-
-## 📊 Output Structure
-
-`create_results_directory()` organizes outputs:
-
-```
-results/your_analysis/
-├── figures/              # All plots
-├── data/                 # CSVs, feature lists
-├── models/               # Saved models
-└── results.json          # Summary metrics
-```
-
-## 🛠️ No Install Usage
-
-```python
-import sys
-sys.path.insert(0, 'src')
-from preprocessing.data_processing import load_and_impute
-```
-
-Recommended: Use `pip install -e .` for clean imports.
-
-## 🔍 Troubleshooting
-
-```bash
-# Import errors
-pip list | grep ml-analysis
-pip install -e . --force-reinstall
-
-# Optional dependencies
-pip install umap-learn     # For UMAP
-pip install mord           # For ordinal regression
-```
-
-## 📝 Dependencies
-
-**Core:** pandas, numpy, scikit-learn, matplotlib, seaborn, shap  
-**Optional:** umap-learn, mord
-
-## 📄 License
-
-[Your License]
-
-## 🤝 Contributing
-
-Format code with `black` before submitting.
+- `save_results()` - Save summaries to JSON
 
 ---
 
-**Version:** 0.1.0 | **Python:** ≥3.8 | **See also:** `ORDINAL_INTEGRATION.md` for ordinal regression details
+## 🎯 Best Practices
+
+### For Small Datasets (n < 20)
+- ✅ Use ordinal regression (respects ordering, better with small n)
+- ✅ Keep k small (2-5 features)
+- ✅ Use all data for visualization (no train/test split)
+- ✅ Report MAE alongside accuracy
+- ⚠️ Perfect accuracy suggests overfitting—need external validation
+
+### For Medium Datasets (n = 20-100)
+- ✅ Compare ordinal vs Random Forest
+- ✅ Use k=10-15 features
+- ✅ Permutation testing for significance
+- ✅ SHAP for interpretability
+
+### For Metabolomics Data
+- ✅ Use `drop_threshold=0.35` (drops features where 1+ group entirely missing)
+- ✅ Set `fill_value=0` (undetected = absent)
+- ✅ Workflow handles negative values automatically
+
+---
+
+## 🔍 Installation Options
+```bash
+# Core package only
+pip install -e .
+
+# With all optional dependencies
+pip install -e ".[all]"
+
+# Specific extras
+pip install -e ".[ordinal]"    # + mord for ordinal regression
+pip install -e ".[umap]"        # + umap-learn
+pip install -e ".[dev]"         # + testing tools
+```
+
+**Core dependencies:** pandas, numpy, scikit-learn, matplotlib, seaborn, shap  
+**Optional:** mord (ordinal), umap-learn (UMAP)
+
+---
+
+## 🐛 Troubleshooting
+
+**Import errors after installation:**
+```bash
+pip list | grep ml-analysis
+pip install -e . --force-reinstall
+```
+
+**Ordinal regression not available:**
+```bash
+pip install mord
+```
+
+**Warnings about FutureWarning/DeprecationWarning:**
+These are cosmetic and don't affect results. Will be addressed in future updates.
+
+---
+
+## 📄 Citation
+
+If you use this package, please cite:
+```
+[TBA]
+```
+
+## 📝 License
+
+MIT License - see LICENSE file
+
+---
+
+**Version:** 0.1.0  
+**Maintained by:** Subaru Muroi
+**Issues:** subarumuroi@github.com
