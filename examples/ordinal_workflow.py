@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 # Import package modules
 from preprocessing import (
     load_and_impute,
-    select_k_best_features
+    select_k_best_features,
+    get_feature_scores,
 )
 from models.ordinal import (
     OrdinalClassifier,
@@ -51,10 +52,11 @@ def main():
     """Run complete ordinal regression workflow."""
     
     # Configuration
-    DATA_FILE = "data/badata.csv"
+    DATA_FILE = "data/badata-metabolomics.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     TOP_N_FEATURES = 10
+    TOP_N_FEATURES_FOR_UNIVARIATE = 10
     
     print("\n" + "="*70)
     print("ORDINAL REGRESSION WORKFLOW")
@@ -71,13 +73,47 @@ def main():
     X = X.select_dtypes(include=[np.number])
     
     print(f"Initial features: {X.shape[1]}, Samples: {X.shape[0]}")
-    
+
+    # Get top N univariate features with scores and p-values
+
+    X_full = X.copy()
+    scores_df = get_feature_scores(X_full, y_raw)  # Returns Feature, Score, P_value
+
+    # Take top N features
+    top_features_all = scores_df['Feature'].head(TOP_N_FEATURES_FOR_UNIVARIATE).tolist()
+
+    # Print to terminal for transparency
+    print(f"\nTop {TOP_N_FEATURES_FOR_UNIVARIATE} features by univariate score (F-statistic) and p-value:")
+    for i, row in scores_df.head(TOP_N_FEATURES_FOR_UNIVARIATE).iterrows():
+        print(f"  {i+1}. {row['Feature']}: Score={row['Score']:.3f}, P-value={row['P_value']:.4g}")
+
+    # Save CSV for scientific reporting
+    scores_df.head(TOP_N_FEATURES_FOR_UNIVARIATE).to_csv(
+        results_dirs['data'] / f'top{TOP_N_FEATURES_FOR_UNIVARIATE}_univariate_scores.csv',
+        index=False
+    )
+
+    print(f"\nGenerating extended compound plots for top {TOP_N_FEATURES_FOR_UNIVARIATE} features...")
+
+
+    for scale in ['linear', 'log']:
+        fig, _ = plot_compound_trends(df, top_features_all, group_col=GROUP_COL,
+                                    group_order=GROUP_ORDER, scale=scale)
+        fig.savefig(results_dirs['figures'] / f'compound_trends_top{TOP_N_FEATURES_FOR_UNIVARIATE}_{scale}.png',
+                    dpi=300, bbox_inches='tight')
+        plt.close()
+
+    fig, _ = plot_compound_boxplots(df, top_features_all, group_col=GROUP_COL, group_order=GROUP_ORDER)
+    fig.savefig(results_dirs['figures'] / f'compound_boxplots_top{TOP_N_FEATURES_FOR_UNIVARIATE}.png',
+                dpi=300, bbox_inches='tight')
+    plt.close()
+
     # STEP 1.5: Determine optimal number of features
     print("\n" + "="*70)
     print("STEP 1.5: Feature Selection Analysis")
     print("="*70)
     
-    feature_counts = [3, 5, 7, 10, 15]
+    feature_counts = [1, 2, 3, 5, 7, 10, 15]
     results_by_k = {}
     
     for k in feature_counts:
@@ -99,11 +135,12 @@ def main():
         }
         print(f"k={k:2d}: Accuracy={results['mean_accuracy']:.3f}±{results['std_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
     
-    # Select optimal k (prioritize lower MAE, then higher accuracy)
+    # Select optimal k (prioritize lower MAE (better ordinal predictions),
+    # then higher accuracy as tiebreaker
     optimal_k = min(results_by_k.keys(), key=lambda k: (results_by_k[k]['mae'], -results_by_k[k]['accuracy']))
     print(f"\n✓ Optimal number of features: {optimal_k}")
     print(f"  Selected features: {results_by_k[optimal_k]['features']}")
-    
+
     # Use optimal k for final model
     X, selected_features, _ = select_k_best_features(X, y_raw, k=optimal_k, verbose=False)
     X = pd.DataFrame(X, columns=selected_features)
@@ -123,9 +160,12 @@ def main():
     model = results['model']
     coef_df = results['coefficients']
     
-    print(f"\nTop {min(TOP_N_FEATURES, len(coef_df))} important features:")
-    print(coef_df.head(TOP_N_FEATURES))
-    
+    print(f"\nModel coefficients (top {min(TOP_N_FEATURES, len(coef_df))} features by |β|):")
+
+    for i, row in coef_df.head(TOP_N_FEATURES).iterrows():
+        direction = "↑ increases" if row['Coefficient'] > 0 else "↓ decreases"
+        print(f"  {i+1}. {row['Feature']}: {direction} ripeness (β={row['Coefficient']:.3f})")
+        
     # Visualizations
     print("\nSTEP 3-5: Generating visualizations...")
     
@@ -171,7 +211,7 @@ def main():
     fig, _ = plot_violin_by_group(df, top_features, group_col=GROUP_COL, group_order=GROUP_ORDER)
     fig.savefig(results_dirs['figures'] / 'violin_plots.png', dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     # Compare ordinal models
     print("\n" + "="*70)
     print("STEP 9: Comparing Ordinal Models")

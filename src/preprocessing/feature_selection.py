@@ -28,6 +28,7 @@ def select_k_best_features(X, y, k=15, score_func=f_classif, verbose=True):
     -------
     tuple
         (X_selected, selected_feature_names, selector)
+        X_selected and selected_feature_names are sorted by score (descending)
     """
     # Convert y to array if Series
     if isinstance(y, pd.Series):
@@ -37,7 +38,16 @@ def select_k_best_features(X, y, k=15, score_func=f_classif, verbose=True):
     
     selector = SelectKBest(score_func=score_func, k=k)
     X_selected = selector.fit_transform(X, y)
-    selected_features = X.columns[selector.get_support()]
+    
+    # Get selected features and their scores
+    feature_mask = selector.get_support()
+    selected_features = X.columns[feature_mask]
+    selected_scores = selector.scores_[feature_mask]
+    
+    # Sort by score (descending)
+    sorted_indices = np.argsort(selected_scores)[::-1]
+    selected_features = selected_features[sorted_indices]
+    X_selected = X_selected[:, sorted_indices]
     
     if verbose:
         print(f"Selected {k} features from {X.shape[1]} total features")
