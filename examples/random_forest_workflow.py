@@ -1,5 +1,5 @@
 """
-Modern workflow using the installed package.
+Random forest workflow using the installed package.
 
 After installing with: pip install -e .
 
