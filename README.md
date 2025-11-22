@@ -4,7 +4,7 @@ A modular Python package for machine learning analysis of omics data with ordina
 
 **Built for:** Multi-omics classification tasks (metabolomics, proteomics, transcriptomics) with emphasis on ordered outcomes.
 
-## 🚀 Quick Install
+## Quick Install
 ```bash
 cd /path/to/ML_omics
 
@@ -12,14 +12,14 @@ cd /path/to/ML_omics
 pip install -e ".[all]"
 
 # Verify installation
-python -c "from preprocessing import load_and_impute; print('✅ Ready!')"
+python -c "from preprocessing import load_and_impute; print('Ready!')"
 ```
 
 **Requirements:** Python ≥3.8
 
 ---
 
-## 📖 Quick Start
+## Quick Start
 
 ### Ordinal Regression (Recommended for Ordered Outcomes)
 
@@ -64,7 +64,7 @@ print(f"CV Accuracy: {clf.cv_results['mean_accuracy']:.3f}")
 
 ---
 
-## 📁 Package Structure
+## Package Structure
 ```
 ML_omics/
 ├── src/
@@ -76,12 +76,12 @@ ML_omics/
 │
 └── examples/
     ├── ordinal_regression_workflow.py   # Main workflow (recommended for data with classifiable stages (I.e. disease progression))
-    └── random_forest_workflow.py        # Alternative baseline
+    └── random_forest_workflow.py        # Alternative baseline (RF can help rank important features for mixed variable problems with categorical outcomes)
 ```
 
 ---
 
-## 🔬 Key Features
+## Key Features
 
 ### Automatic Data Handling
 
@@ -151,7 +151,7 @@ plot_compound_boxplots(df, top_features, group_col='Groups')
 
 ---
 
-## 💡 Complete Workflow Example
+## Complete Workflow Example
 
 See `examples/ordinal_workflow.py` for full pipeline including:
 
@@ -174,7 +174,7 @@ results/ordinal_analysis/
 
 ---
 
-## 📊 Output Structure
+## Output Structure
 
 Organized results directory:
 ```
@@ -193,7 +193,7 @@ results/your_analysis_name/
 
 ---
 
-## 🔧 Common Use Cases
+## Common Use Cases
 
 ### 1. Quick Classification
 ```python
@@ -232,7 +232,7 @@ print(f"p-value: {perm_results['p_value']:.4f}")
 
 ---
 
-## 📚 Core Modules
+## Core Modules
 
 ### preprocessing
 - `load_and_impute()` - Load CSV with smart missing data handling
@@ -265,7 +265,7 @@ print(f"p-value: {perm_results['p_value']:.4f}")
 
 ---
 
-## 🎯 Best Practices
+## Best Practices
 
 ### For Small Datasets (n < 20)
 - ✅ Use ordinal regression (respects ordering, better with small n)
@@ -281,13 +281,13 @@ print(f"p-value: {perm_results['p_value']:.4f}")
 - ✅ SHAP for interpretability
 
 ### For Metabolomics Data
-- ✅ Use `drop_threshold=0.35` (drops features where 1+ group entirely missing)
+- ✅ Use `drop_threshold=0.35` (drops features where 1+ group entirely missing (when 3 equal n groups exist))
 - ✅ Set `fill_value=0` (undetected = absent)
 - ✅ Workflow handles negative values automatically
 
 ---
 
-## 🔍 Installation Options
+## Installation Options
 ```bash
 # Core package only
 pip install -e .
@@ -306,7 +306,7 @@ pip install -e ".[dev]"         # + testing tools
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 **Import errors after installation:**
 ```bash
@@ -324,14 +324,14 @@ These are cosmetic and don't affect results. Will be addressed in future updates
 
 ---
 
-## 📄 Citation
+## Citation
 
 If you use this package, please cite:
 ```
 [TBA]
 ```
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file
 
