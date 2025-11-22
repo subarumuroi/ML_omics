@@ -86,7 +86,7 @@ def main():
 
         # Check for NaN values that survived imputation
     if X.isna().any().any():
-        print("\n⚠️ WARNING: NaN values detected after imputation!")
+        print("\n WARNING: NaN values detected after imputation!")
         nan_counts = X.isna().sum()
         print(f"Columns with NaN: {nan_counts[nan_counts > 0].to_dict()}")
         

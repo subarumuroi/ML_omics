@@ -272,6 +272,7 @@ print(f"p-value: {perm_results['p_value']:.4f}")
 - ✅ Keep k small (2-5 features)
 - ✅ Use all data for visualization (no train/test split)
 - ✅ Report MAE alongside accuracy
+- ✅ Use default minmax scaler and remove outlier (standard scaler may be too sensitive when data is not normally distributed)
 - ⚠️ Perfect accuracy suggests overfitting—need external validation
 
 ### For Medium Datasets (n = 20-100)
