@@ -285,7 +285,7 @@ print(f"p-value: {perm_results['p_value']:.4f}")
 - ✅ Use `drop_threshold=0.35` (drops features where 1+ group entirely missing (when 3 equal n groups exist))
 - ✅ Set `fill_value=0` (undetected = absent)
 - ✅ Workflow handles negative values automatically
-
+- ⚠️ Recommend switch scaler in ordinal models to 'standard' (instead of minmax) when n>30
 ---
 
 ## Installation Options
