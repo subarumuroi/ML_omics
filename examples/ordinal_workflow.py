@@ -52,7 +52,7 @@ def main():
     """Run complete ordinal regression workflow."""
     
     # Configuration
-    DATA_FILE = "data/badata-metabolomics.csv"
+    DATA_FILE = "data/badata.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     TOP_N_FEATURES = 10
@@ -290,8 +290,9 @@ def main():
     print(f"\nOptimal k: {optimal_k}")
     print(f"Ordinal: Accuracy={results['mean_accuracy']:.3f}±{results['std_accuracy']:.3f}, MAE={results['mean_mae']:.3f}")
     print(f"RF: Accuracy={rf_clf.cv_results['mean_accuracy']:.3f}±{rf_clf.cv_results['std_accuracy']:.3f}")
-    print(f"\nTop 3 features predicting ripeness:")
-    for i, row in coef_df.head(3).iterrows():
+    print(f"\nTop {optimal_k} features predicting ripeness:")
+    top_k_coef = coef_df.head(optimal_k)
+    for i, row in top_k_coef.iterrows():
         direction = "↑ increases" if row['Coefficient'] > 0 else "↓ decreases"
         print(f"  {i+1}. {row['Feature']}: {direction} ripeness (β={row['Coefficient']:.3f})")
     print(f"\nResults: {results_dirs['base']}")
