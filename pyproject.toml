@@ -32,6 +32,8 @@ dependencies = [
     "matplotlib>=3.4.0",
     "seaborn>=0.11.0",
     "shap>=0.40.0",
+    "umap-learn>=0.5.0",
+    "mord>=0.6",
 ]
 
 [project.optional-dependencies]
@@ -41,16 +43,6 @@ dev = [
     "black>=22.0.0",
     "flake8>=4.0.0",
     "mypy>=0.950",
-]
-umap = [
-    "umap-learn>=0.5.0",
-]
-ordinal = [
-    "mord>=0.6",
-]
-all = [
-    "umap-learn>=0.5.0",
-    "mord>=0.6",
 ]
 
 [tool.setuptools]

@@ -142,7 +142,7 @@ def compare_importance_methods(tree_importance_df, perm_importance_df, top_n=10)
     return comparison[['Feature', 'Importance_Tree', 'Importance_Perm', 'Std']]
 
 
-def get_shap_values(model, X, check_additivity=False):
+def get_shap_values(model, X):
     """
     Compute SHAP values for model interpretation.
     
@@ -154,8 +154,6 @@ def get_shap_values(model, X, check_additivity=False):
         Trained tree-based model (RandomForest, GradientBoosting, etc.)
     X : pd.DataFrame or np.ndarray
         Feature matrix
-    check_additivity : bool, default=False
-        Check SHAP value additivity (slower but more thorough)
         
     Returns
     -------
@@ -169,7 +167,7 @@ def get_shap_values(model, X, check_additivity=False):
     except ImportError:
         raise ImportError("SHAP not installed. Install with: pip install shap")
     
-    explainer = shap.TreeExplainer(model, check_additivity=check_additivity)
+    explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
     
     return explainer, shap_values

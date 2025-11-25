@@ -54,7 +54,7 @@ def main():
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     N_FEATURES_SELECT = 15
     N_TOP_FEATURES = 3
-    N_PERMUTATIONS = 1000
+    N_PERMUTATIONS = 100 # 1000 # use 1000 for formal or publication anlayses
     RANDOM_STATE = 42
     
     print("\n" + "="*70)
@@ -152,7 +152,12 @@ def main():
     fig, _ = plot_compound_trends(df, top_features, scale='log')
     fig.savefig(results_dirs['figures'] / 'trends.png', dpi=300, bbox_inches='tight')
     plt.close()
+
+    top_features = get_top_n_features(importance_df, n=N_TOP_FEATURES)
     
+    fig, _ = plot_compound_trends(df, top_features, scale='log')
+    fig.savefig(results_dirs['figures'] / 'top3_trends.png', dpi=300, bbox_inches='tight')
+    plt.close()
     # ======================================================================
     # 7. TOP N FEATURES ANALYSIS
     # ======================================================================
@@ -196,6 +201,9 @@ def main():
     try:
         explainer, shap_values = get_shap_values(clf.model, X_df)
         plot_shap_summary(shap_values, X_df, le.classes_)
+        plt.gcf().savefig(results_dirs['figures'] / 'shap_summary.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
     except ImportError:
         print("SHAP not installed, skipping...")
     
