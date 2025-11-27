@@ -72,28 +72,20 @@ def main():
     X, y_raw, _, _, _ = prepare_data(df, target_col=GROUP_COL, drop_missing=True)
     X = X.select_dtypes(include=[np.number])
     
-    #=== fixes problem of negative value in matab ===#
+    #=== fixes problem of negative values in metab ===#
     # Handle negative values for metabolomics data (before log transformation)
     if (X < 0).any().any():
         n_negatives = (X < 0).sum().sum()
-        min_val = X.min().min()
-        print(f"\nWarning: Found {n_negatives} negative values (min={min_val:.2f})")
-        print("Shifting data to positive range for log transformation...")
+        print(f"\nWarning: Found {n_negatives} negative values across {(X < 0).any().sum()} features")
+        print("Applying per-feature shifting to positive range for log transformation...")
         
-        # Shift to positive: make minimum value = 1
-        X = X - min_val + 1
-        print(f"✓ Shifted all values by {-min_val + 1:.2f}")
-
-        # Check for NaN values that survived imputation
-    if X.isna().any().any():
-        print("\n WARNING: NaN values detected after imputation!")
-        nan_counts = X.isna().sum()
-        print(f"Columns with NaN: {nan_counts[nan_counts > 0].to_dict()}")
+        # Per-feature shift: each negative feature shifted independently
+        for col in X.columns:
+            if (X[col] < 0).any():
+                shift_amount = abs(X[col].min()) + 1
+                X[col] = X[col] + shift_amount
         
-        # Fill remaining NaNs with column median or 0
-        print("Filling remaining NaNs with 0...")
-        X = X.fillna(0)
-        print("✓ NaN values handled")
+        print(f"✓ Shifted {(X < 0).any().sum()} features independently")
     #=== end fix ===#
 
     print(f"Initial features: {X.shape[1]}, Samples: {X.shape[0]}")
@@ -192,7 +184,7 @@ def main():
         
     # Visualizations
     print("\nSTEP 3-5: Generating visualizations...")
-    
+
     # Coefficients
     fig, _ = plot_ordinal_coefficients(coef_df, top_n=min(TOP_N_FEATURES, len(coef_df)))
     fig.savefig(results_dirs['figures'] / 'ordinal_coefficients.png', dpi=300, bbox_inches='tight')
@@ -297,7 +289,52 @@ def main():
         print(f"  {i+1}. {row['Feature']}: {direction} ripeness (β={row['Coefficient']:.3f})")
     print(f"\nResults: {results_dirs['base']}")
     print("="*70 + "\n")
-
-
+'''
+# === ADD THIS RIGHT AFTER STEP 11 (before final summary) ===
+    
+    # STEP 11.5: Generate extended coefficient plot for visualization
+    print("\n" + "="*70)
+    print("STEP 11.5: Extended Coefficient Analysis for Visualization")
+    print("="*70)
+    
+    CUSTOM_K_FOR_VIZ = 7  # Change this to 10 or 15 as needed
+    
+    if CUSTOM_K_FOR_VIZ != optimal_k:
+        print(f"\nTraining model with k={CUSTOM_K_FOR_VIZ} features for extended visualization...")
+        
+        # Select and train with custom k
+        X_viz, features_viz, _ = select_k_best_features(X_full, y_raw, k=CUSTOM_K_FOR_VIZ, verbose=False)
+        X_viz = pd.DataFrame(X_viz, columns=features_viz)
+        
+        results_viz = train_evaluate_ordinal(X_viz, y, model_type='LogisticAT', 
+                                            scaler='minmax', log_transform=True, 
+                                            n_splits=None, verbose=False)
+        
+        coef_df_viz = results_viz['coefficients']
+        
+        print(f"Extended model performance (k={CUSTOM_K_FOR_VIZ}):")
+        print(f"  Accuracy: {results_viz['mean_accuracy']:.3f}±{results_viz['std_accuracy']:.3f}")
+        print(f"  MAE: {results_viz['mean_mae']:.3f}")
+        
+        print(f"\nExtended coefficients (all {CUSTOM_K_FOR_VIZ} features):")
+        for i, row in coef_df_viz.iterrows():
+            direction = "↑ increases" if row['Coefficient'] > 0 else "↓ decreases"
+            print(f"  {i+1}. {row['Feature']}: {direction} ripeness (β={row['Coefficient']:.3f})")
+        
+        # Save extended coefficients
+        coef_df_viz.to_csv(results_dirs['data'] / f'ordinal_coefficients_k{CUSTOM_K_FOR_VIZ}.csv', index=False)
+        
+        # Generate extended coefficient plot
+        fig, _ = plot_ordinal_coefficients(coef_df_viz, top_n=CUSTOM_K_FOR_VIZ)
+        fig.savefig(results_dirs['figures'] / f'ordinal_coefficients_k{CUSTOM_K_FOR_VIZ}.png', 
+                   dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"\n✓ Extended visualization saved: ordinal_coefficients_k{CUSTOM_K_FOR_VIZ}.png")
+    else:
+        print(f"\nSkipping extended analysis (CUSTOM_K_FOR_VIZ={CUSTOM_K_FOR_VIZ} matches optimal_k={optimal_k})")
+    
+    # === END SNIPPET ===
+'''
 if __name__ == "__main__":
     main()
