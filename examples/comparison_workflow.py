@@ -354,7 +354,7 @@ def main():
     """Run complete comparative chemometrics workflow."""
     
     # Configuration
-    DATA_FILE = "data/badata-metabolomics.csv"  # Change as needed
+    DATA_FILE = "data/badata.csv"  # Change as needed
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     N_COMPONENTS = 5  # For PCA-LDA and PLS-DA
