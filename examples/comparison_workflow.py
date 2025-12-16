@@ -32,7 +32,7 @@ from models.ordinal import (
     train_evaluate_ordinal,
     encode_ordinal_target,
 )
-from models import train_evaluate_model
+from models import train_evaluate_rf
 from utils import (
     prepare_data,
     set_categorical_order,
@@ -171,7 +171,7 @@ def compare_all_methods(X, y, y_ordinal, n_components=5):
     
     # 3. Random Forest (Modern ML baseline)
     print("\n3. Training Random Forest (modern ML baseline)...")
-    rf_clf = train_evaluate_model(X, y, n_estimators=100, max_depth=3, verbose=False)
+    rf_clf = train_evaluate_rf(X, y, n_estimators=100, max_depth=3, verbose=False)
     results['random_forest'] = {
         'model_name': 'Random Forest',
         'mean_accuracy': rf_clf.cv_results['mean_accuracy'],

@@ -14,7 +14,7 @@ from sklearn.model_selection import StratifiedKFold
 
 # Clean imports using the installed package
 from preprocessing import load_and_impute, select_k_best_features, get_top_n_features
-from models import train_evaluate_model
+from models import train_evaluate_rf
 from models.evaluation import create_results_summary, compare_models
 from analysis import (
     get_feature_importance_df,
@@ -92,7 +92,7 @@ def main():
     # ======================================================================
     print("\nSTEP 3: Training model with cross-validation...")
     
-    clf = train_evaluate_model(
+    clf = train_evaluate_rf(
         X=X_df,
         y=y,
         n_estimators=100,
@@ -167,7 +167,7 @@ def main():
     print(f"Top {N_TOP_FEATURES}: {', '.join(top_n)}")
     
     X_topn = X_df[top_n]
-    clf_topn = train_evaluate_model(X_topn, y, random_state=RANDOM_STATE)
+    clf_topn = train_evaluate_rf(X_topn, y, random_state=RANDOM_STATE)
     
     perm_results_topn = permutation_test_with_feature_subset(
         rf, X_df, top_n, y, n_permutations=N_PERMUTATIONS, random_state=RANDOM_STATE
