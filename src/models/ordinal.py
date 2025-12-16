@@ -7,8 +7,8 @@ Requires: pip install mord
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
+from sklearn.model_selection import StratifiedKFold, LeaveOneOut
 from sklearn.metrics import accuracy_score, mean_absolute_error
 
 try:
@@ -219,10 +219,25 @@ def train_evaluate_ordinal(X, y, model_type='LogisticAT', scaler='minmax',
         Dictionary with trained model and CV results
     """
     # Determine CV splits
-    if n_splits is None:
-        n_splits = np.bincount(y).min()
+    N_min_class = np.bincount(y).min()
+    N_total = X.shape[0]
     
-    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    # FIX: Handle n_splits=None and cap it by N_min_class
+    if n_splits is None:
+        k_actual = N_min_class # Use max possible splits (min class size)
+    else:
+        k_actual = n_splits
+        
+    if k_actual == N_total:
+        cv = LeaveOneOut()
+    elif k_actual > N_min_class:
+        # If requested splits (or None default) > min class size, cap it.
+        k_actual = N_min_class
+        cv = StratifiedKFold(n_splits=k_actual, shuffle=True, random_state=random_state)
+        if verbose:
+             print(f"Warning: Requested n_splits ({n_splits}) > Min class size ({N_min_class}). Capping at {k_actual}.")
+    else:
+        cv = StratifiedKFold(n_splits=k_actual, shuffle=True, random_state=random_state)
     
     # Store feature names
     feature_names = X.columns.tolist() if isinstance(X, pd.DataFrame) else None

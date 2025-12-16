@@ -185,14 +185,20 @@ def _make_json_serializable(obj):
         return [_make_json_serializable(item) for item in obj]
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
+    elif isinstance(obj, pd.Index):
+        return obj.tolist()
     elif isinstance(obj, (np.integer, np.floating)):
         return float(obj)
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
-    else:
-        return obj
+    # some fix
+    try:
+        if pd.isna(obj):
+            return None
+    except ValueError:
+        pass
+    #end fix
+    return obj
 
 
 def save_model(model, filepath, verbose=True):

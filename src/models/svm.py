@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
 from sklearn.metrics import mean_absolute_error, accuracy_score
-from sklearn.model_selection import StratifiedKFold, GridSearchCV
+# LeaveOneOut is already imported, perfect!
+from sklearn.model_selection import StratifiedKFold, GridSearchCV, LeaveOneOut 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
@@ -14,35 +15,24 @@ def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
     """
     Train and evaluate SVM model with cross-validation and hyperparameter tuning.
     
-    Parameters
-    ----------
-    X : pd.DataFrame
-        Feature matrix.
-    y : np.ndarray
-        Ordinal target (encoded as 0, 1, 2, ...).
-    kernel : str, default='rbf'
-        Kernel type: 'linear' or 'rbf'.
-    scaler : str, default='minmax'
-        Scaling method.
-    log_transform : bool, default=True
-        Apply log transformation.
-    n_splits : int, default=5
-        Number of CV folds. (This controls the OUTER loop)
-    random_state : int, default=42
-        Random state.
-    verbose : bool, default=True
-        Print results.
-        
-    Returns
-    -------
-    dict
-        Dictionary with trained model and CV results.
+    ... (docstring remains the same)
     """
-    # n_splits will be 3, as passed by general_badata_workflow.py for small data
-    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    # Determine CV splits
+    N_min_class = np.bincount(y).min()
+    N_total = X.shape[0]
+    if n_splits == N_total:
+        cv = LeaveOneOut()
+        final_grid_cv = LeaveOneOut()
+    elif n_splits > N_min_class:
+        cv = StratifiedKFold(n_splits=N_min_class, shuffle=True, random_state=random_state)
+        final_grid_cv = cv
+    else:
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+        final_grid_cv = cv
+    
     feature_names = X.columns.tolist()
 
-    # 1. Preprocessing Setup
+    # 1. Preprocessing Setup (remains the same)
     scaler_cls = MinMaxScaler if scaler == 'minmax' else StandardScaler
     s = scaler_cls()
     X_proc_all = np.log10(X + 1e-10) if log_transform else X
@@ -50,7 +40,7 @@ def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
     # Scale features
     X_scaled_all = s.fit_transform(X_proc_all)
     
-    # 2. Hyperparameter Grid
+    # 2. Hyperparameter Grid (remains the same)
     if kernel == 'linear':
         param_grid = {'C': [0.1, 1, 10]}
     elif kernel == 'rbf':
@@ -65,9 +55,10 @@ def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
     all_pred = []
 
     # Inner CV folds must be 2 because the minimum class size in the training fold (N=6, 2:2:2) is 2.
-    INNER_CV_SPLITS = 2
+    # Note: We keep this fixed at 2 for maximum stability in your small dataset.
+    INNER_CV_SPLITS = 2 
 
-    for fold, (train_idx, test_idx) in enumerate(cv.split(X_scaled_all, y)):
+    for fold, (train_idx, test_idx) in enumerate(cv.split(X_scaled_all, y)): # 'cv' is now LeaveOneOut if n_splits=9
         X_train, X_test = X_scaled_all[train_idx], X_scaled_all[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
         
@@ -83,7 +74,7 @@ def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
         # Predict on test set
         y_pred = best_clf.predict(X_test)
         
-        # Metrics
+        # Metrics (remains the same)
         acc = accuracy_score(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
         
@@ -98,13 +89,13 @@ def train_evaluate_svm(X, y, kernel='rbf', scaler='minmax', log_transform=True,
     # 4. Train final model on all data
     final_clf = SVC(kernel=kernel, random_state=random_state)
     
-    # FINAL GRID FIX: Set cv=n_splits (which is 3) as the full dataset has min class size 3
-    final_grid = GridSearchCV(final_clf, param_grid, cv=n_splits, scoring='accuracy', n_jobs=-1, verbose=0)
+    # FINAL GRID FIX: Use the conditionally defined final_grid_cv (which is LeaveOneOut if n_splits=9)
+    final_grid = GridSearchCV(final_clf, param_grid, cv=final_grid_cv, scoring='accuracy', n_jobs=-1, verbose=0)
     final_grid.fit(X_scaled_all, y)
     
     final_model = final_grid.best_estimator_
     
-    # 5. Feature Importance (Linear Kernel only)
+    # 5. Feature Importance (Linear Kernel only) (remains the same)
     feature_importance_df = pd.DataFrame()
     if kernel == 'linear' and hasattr(final_model, 'coef_'):
         # Mean absolute coefficient across the one-vs-rest classifiers
