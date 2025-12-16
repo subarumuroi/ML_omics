@@ -1,3 +1,4 @@
+
 """
 Ordinal regression workflow example.
 
@@ -23,7 +24,7 @@ from models.ordinal import (
     compare_ordinal_models,
     encode_ordinal_target,
 )
-from models import train_evaluate_model  # For comparison with RF
+from models import train_evaluate_rf  # For comparison with RF
 from utils import (
     prepare_data,
     set_categorical_order,
@@ -244,8 +245,8 @@ def main():
     print("STEP 10: Comparing with Random Forest")
     print("="*70)
     
-    rf_clf = train_evaluate_model(X, y, verbose=True)
-    
+    rf_clf = train_evaluate_rf(X, y, verbose=True)
+
     # Save results
     print("\n" + "="*70)
     print("STEP 11: Saving Results")
@@ -289,6 +290,10 @@ def main():
         print(f"  {i+1}. {row['Feature']}: {direction} ripeness (β={row['Coefficient']:.3f})")
     print(f"\nResults: {results_dirs['base']}")
     print("="*70 + "\n")
+
+
+
+    
 '''
 # === ADD THIS RIGHT AFTER STEP 11 (before final summary) ===
     

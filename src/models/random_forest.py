@@ -186,7 +186,7 @@ class RFClassifierCV:
         return importances
 
 
-def train_evaluate_model(X, y, n_estimators=100, max_depth=3, n_splits=None, 
+def train_evaluate_rf(X, y, n_estimators=100, max_depth=3, n_splits=None, 
                          random_state=42, verbose=True, **kwargs):
     """
     Convenience function to train and evaluate RF model with CV.

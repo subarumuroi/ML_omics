@@ -5,7 +5,7 @@
 Models module for Random Forest classification, ordinal regression, and evaluation.
 """
 
-from .random_forest import RFClassifierCV, train_evaluate_model
+from .random_forest import RFClassifierCV, train_evaluate_rf
 from .evaluation import (
     get_classification_report,
     get_confusion_matrix,
@@ -28,7 +28,7 @@ except ImportError:
 
 __all__ = [
     'RFClassifierCV',
-    'train_evaluate_model',
+    'train_evaluate_rf',
     'get_classification_report',
     'get_confusion_matrix',
     'compute_cv_metrics',
