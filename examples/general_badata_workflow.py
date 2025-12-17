@@ -1,5 +1,5 @@
 """
-General Classification Workflow for Metabolomics Data (Badata) - CORRECTED VERSION.
+General Classification Workflow for Metabolomics Data (Badata).
 
 This version implements proper nested cross-validation to prevent data leakage.
 Feature selection happens INSIDE each CV fold, not before.
@@ -305,7 +305,7 @@ def run_nested_model_comparison(X, y_encoded, y_raw, k_features, results_dirs, v
 
 
 def main():
-    """Run complete CORRECTED classification workflow with proper nested CV."""
+    """Run complete classification workflow with nested CV."""
     
     # Configuration
     DATA_FILE = "data/badata.csv"
@@ -314,7 +314,7 @@ def main():
     K_FEATURES = 3
     
     print("\n" + "="*70)
-    print(f"CORRECTED NESTED CV WORKFLOW (k={K_FEATURES} Features)")
+    print(f"CV WORKFLOW (k={K_FEATURES} Features)")
     print("Feature selection happens INSIDE each CV fold")
     print("="*70 + "\n")
     
@@ -377,7 +377,7 @@ def main():
     print("ANALYSIS COMPLETE!")
     print("="*70)
     print(f"Feature Count (k): {K_FEATURES} (selected independently in each fold)")
-    print(f"CV Strategy: Nested LOOCV (no data leakage)")
+    print(f"CV Strategy: LOOCV")
     print(f"Sample Size: {X_full.shape[0]}")
     
     best_model_key = max(model_results.keys(), 
@@ -388,8 +388,6 @@ def main():
     print(f"Accuracy: {best_model['Mean_Accuracy']:.3f} ± {best_model['Std_Accuracy']:.3f}")
     print(f"MAE: {best_model['MAE']:.3f} ± {best_model['Std_MAE']:.3f}")
     
-    print(f"\n⚠️  NOTE: With only {X_full.shape[0]} samples, these results have high variance")
-    print("    and may not generalize well. Consider collecting more data.")
     print(f"\nResults saved in: {results_dirs['base']}")
     print("="*70 + "\n")
 
