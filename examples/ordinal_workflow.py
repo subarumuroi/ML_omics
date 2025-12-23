@@ -53,7 +53,7 @@ def main():
     """Run complete ordinal regression workflow."""
     
     # Configuration
-    DATA_FILE = "data/badata.csv"
+    DATA_FILE = "data/badata-proteomics-unimputed.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     TOP_N_FEATURES = 10
