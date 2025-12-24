@@ -18,6 +18,9 @@ from preprocessing import (
     select_k_best_features,
     get_feature_scores,
 )
+
+from analysis.network_analysis import analyze_network_modules, plot_network
+
 from models.ordinal import (
     OrdinalClassifier,
     train_evaluate_ordinal,
@@ -291,7 +294,64 @@ def main():
     print(f"\nResults: {results_dirs['base']}")
     print("="*70 + "\n")
 
+    print("\n" + "="*70)
+    print("STEP 12: Network Analysis")
+    print("="*70)
 
+    # Use the optimal k features as key features
+    key_features = X.columns.tolist()
+
+    print(f"\nAnalyzing metabolite/proteome modules around {len(key_features)} key features...")
+    print(f"Key features: {key_features}")
+
+    # Analyze modules
+    modules, full_corr_matrix = analyze_network_modules(
+        df, 
+        key_features,
+        corr_threshold=0.95,  # Adjust based on your data (0.7 standard for small feature, 0.95 for stringent)
+        cut_height=0.05        # Adjust to control cluster tightness (0.3 standard, 0.05 stringent)
+    )
+
+    # Save module information
+    module_summary = []
+    for feature, module_info in modules.items():
+        for member in module_info['cluster_members']:
+            module_summary.append({
+                'Key_Feature': feature,
+                'Cluster_Member': member,
+                'Correlation': module_info['correlation_values'].get(member, np.nan),
+                'Cluster_ID': module_info['cluster_id']
+            })
+
+    module_df = pd.DataFrame(module_summary)
+    module_df.to_csv(results_dirs['data'] / 'network_modules.csv', index=False)
+
+    print(f"\n✓ Module analysis saved: {len(module_df)} network-module associations")
+
+    # Generate visualizations
+    for key_feature in modules.keys():
+        fig = plot_network(modules, full_corr_matrix, key_feature, 
+                                    results_dirs['figures'])
+        if fig:
+            # Clean feature name for filename
+            safe_name = key_feature.replace(' ', '_').replace(':', '_')
+            fig.savefig(results_dirs['figures'] / f'cluster_network_{safe_name}.png',
+                    dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"  ✓ Network plot saved for {key_feature}")
+
+    # Print summary
+    print("\n" + "="*70)
+    print("MODULE SUMMARY")
+    print("="*70)
+    for feature, module_info in modules.items():
+        print(f"\n{feature}:")
+        print(f"  Core cluster: {len(module_info['cluster_members'])} metabolites/proteomes")
+        print(f"  Top correlated:")
+        top_corr = sorted(module_info['correlation_values'].items(), 
+                        key=lambda x: abs(x[1]), reverse=True)[:5]
+        for met, corr in top_corr:
+            print(f"    - {met}: r={corr:.3f}")
 
     
 '''
@@ -341,5 +401,8 @@ def main():
     
     # === END SNIPPET ===
 '''
+
+
+
 if __name__ == "__main__":
     main()
