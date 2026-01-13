@@ -49,7 +49,7 @@ def main():
     # ======================================================================
     # CONFIGURATION
     # ======================================================================
-    DATA_FILE = "data\\badata.csv"
+    DATA_FILE = "data\\badata-proteomics-imputed.csv"
     GROUP_COL = "Groups"
     GROUP_ORDER = ["Green", "Ripe", "Overripe"]
     N_FEATURES_SELECT = 15
@@ -94,7 +94,7 @@ def main():
     
     clf = train_evaluate_rf(
         X=X_df,
-        y=y,
+        y_raw=y_raw,
         n_estimators=100,
         max_depth=3,
         random_state=RANDOM_STATE,
@@ -167,7 +167,7 @@ def main():
     print(f"Top {N_TOP_FEATURES}: {', '.join(top_n)}")
     
     X_topn = X_df[top_n]
-    clf_topn = train_evaluate_rf(X_topn, y, random_state=RANDOM_STATE)
+    clf_topn = train_evaluate_rf(X_topn, y_raw=y_raw, random_state=RANDOM_STATE)
     
     perm_results_topn = permutation_test_with_feature_subset(
         rf, X_df, top_n, y, n_permutations=N_PERMUTATIONS, random_state=RANDOM_STATE
