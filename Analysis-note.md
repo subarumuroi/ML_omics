@@ -135,6 +135,6 @@ Q: "Is this really ML or just statistics?"
 
 Bottom Line:
 Methodologically: Ordinal regression = statistical model
-Workflow-wise: Your pipeline = ML best practices (CV, feature selection, comparison)
+Workflow-wise: Pipeline contains best ML practices (CV, feature selection, comparison)
 Contribution: Application + comparison showing ordinal > traditional chemometrics
-Be honest about what it is (statistics), but emphasize what it adds (respects ordering, minimal markers, interpretable) over PCA-DA/PLS-DA.
+statistical analyis using ml practice that respects ordering, minimal markers, and interpretability over PCA-DA/PLS-DA.
